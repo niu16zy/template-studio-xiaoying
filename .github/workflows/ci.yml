@@ -1,0 +1,68 @@
+name: Container checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint, TypeScript, tests, production build (Node container)
+        run: docker compose -f compose.test.yaml run --build --rm frontend-check
+      - name: Clean up
+        if: always()
+        run: docker compose -f compose.test.yaml down
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java tests, MySQL integration tests and package (Java container)
+        run: |
+          mkdir -p artifacts/backend
+          docker compose -f compose.test.yaml run --build --rm -v "$PWD/artifacts/backend:/reports" backend-check
+      - name: Collect database logs
+        if: always()
+        run: docker compose -f compose.test.yaml logs --no-color > artifacts/backend/compose.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-reports
+          path: artifacts/backend
+      - name: Clean up
+        if: always()
+        run: docker compose -f compose.test.yaml down
+  compose-smoke:
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start all production containers
+        run: docker compose up --build -d --wait --wait-timeout 180
+      - name: Verify the same-origin Java proxy and packaged seed files
+        run: docker compose exec -T frontend node scripts/smoke.mjs
+      - name: Verify asynchronous stages, injected failures and queued tasks
+        run: docker compose exec -T frontend node scripts/tasks-demo.mjs verify
+      - name: Recreate Java with existing volumes and verify migration repeatability
+        run: |
+          docker compose up -d --wait --wait-timeout 180 --force-recreate backend
+          docker compose exec -T frontend node scripts/smoke.mjs
+          docker compose exec -T frontend node scripts/tasks-demo.mjs verify-existing
+      - name: Collect service logs
+        if: always()
+        run: |
+          mkdir -p artifacts
+          docker compose logs --no-color > artifacts/compose.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compose-logs
+          path: artifacts/compose.log
+      - name: Clean up
+        if: always()
+        run: docker compose down

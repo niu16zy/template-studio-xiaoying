@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: material-studio
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/material_app?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    username: ${SPRING_DATASOURCE_USERNAME:material_app}
+    password: ${SPRING_DATASOURCE_PASSWORD:local_demo_password}
+    hikari:
+      connection-timeout: 5000
+  flyway:
+    enabled: true
+    clean-disabled: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+  jackson:
+    time-zone: UTC
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    arg-name-based-constructor-auto-mapping: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,taskExecution
+server:
+  shutdown: graceful
+  tomcat:
+    max-swallow-size: 8MB
+spring.lifecycle.timeout-per-shutdown-phase: 30s
+studio:
+  demo-mode: ${DEMO_MODE:true}
+  session-ttl-days: ${SESSION_TTL_DAYS:7}
+  cookie-secure: ${COOKIE_SECURE:false}
+  storage-root: ${STORAGE_ROOT:/app/data}
+  simulation-enabled: ${SIMULATION_ENABLED:true}
+  sim-check-ms: ${SIM_CHECK_MS:1500}
+  sim-gen-ms: ${SIM_GEN_MS:6000}
+  sim-finalize-ms: ${SIM_FINALIZE_MS:1500}
+  worker-enabled: ${TASK_WORKER_ENABLED:true}
+  queue-poll-ms: ${QUEUE_POLL_MS:500}

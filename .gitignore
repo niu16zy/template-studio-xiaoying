@@ -1,0 +1,14 @@
+node_modules/
+.next/
+coverage/
+target/
+.env
+.env.*
+!.env.example
+.cache/
+artifacts/
+docs/reference/
+*.log
+.DS_Store
+.idea/
+.vscode/

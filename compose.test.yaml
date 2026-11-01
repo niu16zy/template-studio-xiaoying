@@ -1,0 +1,39 @@
+name: material-studio-checks
+services:
+  mysql-test:
+    image: mysql:8.4.7
+    environment:
+      MYSQL_DATABASE: material_test
+      MYSQL_USER: material_test
+      MYSQL_PASSWORD: local_test_password
+      MYSQL_ROOT_PASSWORD: local_test_root_password
+      TZ: UTC
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql --protocol=TCP -h 127.0.0.1 -u$$MYSQL_USER -D $$MYSQL_DATABASE -e 'SELECT 1'"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+  frontend-check:
+    build:
+      context: ./frontend
+      target: checks
+  backend-check:
+    build:
+      context: ./backend
+      target: checks
+    volumes:
+      - maven-cache:/root/.m2
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-test:3306/material_test?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+      SPRING_DATASOURCE_USERNAME: material_test
+      SPRING_DATASOURCE_PASSWORD: local_test_password
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC -Djava.awt.headless=true
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+
+volumes:
+  maven-cache:

@@ -1,0 +1,15 @@
+# Optional real-browser acceptance. Run together with compose.yaml.
+services:
+  browser-check:
+    profiles: [acceptance]
+    build: ./browser-check
+    init: true
+    shm_size: 1gb
+    environment:
+      STUDIO_ORIGIN: http://frontend:3000
+    volumes:
+      - ./samples/uploads:/samples:ro
+      - ./artifacts/browser:/reports
+    depends_on:
+      frontend:
+        condition: service_healthy
